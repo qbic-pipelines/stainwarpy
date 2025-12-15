@@ -1,6 +1,6 @@
 import numpy as np
 import xml.etree.ElementTree as ET
-from tifffile import imread, TiffFile
+from tifffile import imread, TiffFile, TiffWriter
 from skimage.transform import resize
 import collections
 
@@ -182,3 +182,69 @@ def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
     moving_init = load_image_data(moving_path)
 
     return fixed_init, moving_init
+
+
+
+def save_ome_tiff(
+    img,
+    out_path,
+    channel_names=None,
+    physical_size_x=None,
+    physical_size_y=None,
+    source_ome_xml=None):
+
+    if img.ndim == 2:
+        # grayscale (Y, X)
+        Y, X = img.shape
+        C = 1
+        img = img.reshape(Y, X, 1)
+        data = img.transpose(2, 0, 1)
+
+    elif img.ndim == 3:
+        if img.shape[2] == 3:
+            # RGB (Y, X, 3)
+            Y, X, C = img.shape
+            data = img.transpose(2, 0, 1)
+
+        elif img.shape[2] > 3:
+            # multiplexed (Y, X, C)
+            Y, X, C = img.shape
+            data = img.transpose(2, 0, 1)
+
+        else:
+            raise ValueError(f"Unsupported shape {img.shape}: no alpha allowed and no Z/T.")
+
+    else:
+        raise ValueError(f"Unsupported ndim={img.ndim}")
+
+    
+    if channel_names is None:
+        try:
+            if source_ome_xml is not None:
+                root = ET.fromstring(source_ome_xml)
+                channel_names = [c.get("Name") for c in root.findall(".//{*}Channel")]
+            else:
+                # if not provided, auto-generate
+                channel_names = [f"Channel_{i}" for i in range(C)]
+        except:
+            channel_names = [f"Channel_{i}" for i in range(C)]
+
+    if len(channel_names) != C:
+        raise ValueError(f"Channel name count {len(channel_names)} does not match C={C}")
+    
+    
+    with TiffWriter(out_path, bigtiff=True) as tif:
+         metadata={
+             'axes': 'CYX',
+             'PhysicalSizeX': physical_size_x,
+             'PhysicalSizeXUnit': 'µm',
+             'PhysicalSizeY': physical_size_y,
+             'PhysicalSizeYUnit': 'µm',
+             'Channel': {'Name': channel_names},
+         }
+
+         tif.write(
+             data,
+             resolution=(Y, X),
+             metadata=metadata,
+         )

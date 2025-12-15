@@ -2,10 +2,10 @@ import typer
 import os
 import numpy as np
 import json
-from tifffile import imwrite
+from tifffile import imwrite, TiffFile
 from skimage.transform import AffineTransform, resize
 from .regPipeline import registration_pipeline
-from .preprocess import extract_channel, load_image_data
+from .preprocess import extract_channel, load_image_data, get_pixel_size_ome_tiff, save_ome_tiff
 from .reg import transform_seg_mask
 
 
@@ -42,8 +42,15 @@ def register(
     print(f"Registration metrics saved to {metrics_output_path}")
 
     # save registered image
-    final_img_path = os.path.join(output_folder, "0_final_channel_image.tif")
-    imwrite(final_img_path, final_img)
+    ome_xml = None
+    try:
+        with TiffFile(moving_path) as ref:
+            ome_xml = ref.ome_metadata
+    except:
+        pass
+
+    final_img_path = os.path.join(output_folder, "0_final_channel_image.ome.tif")
+    save_ome_tiff(final_img, final_img_path, physical_size_x=moving_px_sz, physical_size_y=moving_px_sz, source_ome_xml=ome_xml)
 
     print(f"Registered image saved to {final_img_path}")
 
@@ -77,7 +84,7 @@ def transform_seg_mask_cmd(
     fixed_path: str = typer.Argument(..., help="Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     output_folder_path: str = typer.Argument(..., help="Folder to save the transformed segmentation mask"),
     tform_map_path: str = typer.Argument(..., help="Path to the transformation map"),
-    moving_px_sz: float = typer.Argument(..., help="Pixel size of the moving image"),
+    moving_px_sz: str = typer.Argument(..., help="Path to moving image if .ome.tiff or Pixel size of the moving image"),
     fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)", show_default=True)
 ):
     # load mask
@@ -100,7 +107,16 @@ def transform_seg_mask_cmd(
         if fixed_px_sz is None:
             raise ValueError("Pixel size information not found in metadata for fixed image. Please provide fixed_px_sz.")
     
-    scale = moving_px_sz / fixed_px_sz
+    try:
+        moving_px_sz, _ = get_pixel_size_ome_tiff(moving_px_sz)
+    except:
+        pass
+
+    try:
+        scale = float(moving_px_sz) / fixed_px_sz
+    except:
+        raise ValueError("Could not determine moving image pixel sizes for scaling. Please check the provided pixel size or moving image path (ome.tiff).")
+    
     if len(fixed_init.shape) == 2:
         fixed_init_sc = resize(fixed_init, (int(fixed_init.shape[0]/scale), int(fixed_init.shape[1]/scale)), anti_aliasing=True)
     else:

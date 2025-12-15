@@ -69,7 +69,7 @@ stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed
 After running registration, the following files/folders will be generated and saved in the specified output folder:
 
 - **registration_metrics.json** — TRE and Mutual Information  
-- **0_final_channel_image.tif** — Registered image (in the pixel size of moving image)
+- **0_final_channel_image.ome.tif** — Registered image (in the pixel size of moving image)
 - **feature_based_transformation_map.npy** — Transformation map 
 
 
@@ -105,7 +105,7 @@ stainwarpy transform-seg-mask <mask_path> <fixed_path> <output_folder_path> <tfo
 - **fixed_path** : Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
 - **output_folder_path** : Folder to save the transformed segmentation mask
 - **tform_map_path** : Path to the transformation map
-- **moving_px_sz** : Pixel size of the moving image (no need to provide for ome.tiff, so default: None)
+- **moving_px_sz** : Path to moving image if .ome.tiff or Pixel size of the moving image
 
 #### Options
 
