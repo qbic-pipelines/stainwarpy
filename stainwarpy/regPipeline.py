@@ -4,6 +4,24 @@ from .reg import register_DAPI_HnE
 from .metrics import compute_TRE, compute_mutual_information
 
 def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fixed_img, feature_tform='similarity'):
+    """
+    Pipeline for registering images. Loads and scales images, preprocesses them, performs registration, and computes registration 
+    metrics.
+
+    Parameters:
+    - fixed_path (str): Path to the fixed image
+    - moving_path (str): Path to the moving image
+    - fixed_px_sz (float): Pixel size of the fixed image (if image is not .ome.tif)
+    - moving_px_sz (float): Pixel size of the moving image (if image is not .ome.tif)
+    - fixed_img (str): Type of fixed image: ['multiplexed', 'hne']
+    - feature_tform (str): Type of transformation to estimate ('similarity', 'affine', 'projective')
+
+    Returns:
+    - transformation_maps (skimage.transform): Estimated transformation object
+    - moved_img (ndarray): Registered moving image
+    - tre (dict or None): Dictionary with TRE values before and after registration if computed, else None
+    - mi (dict or None): Dictionary with Mutual Information (MI) values before and after registration if computed, else None
+    """
     
     # load and scale images 
     fixed_init, moving_init = load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz)

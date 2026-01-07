@@ -134,7 +134,7 @@ tform_map, final_img, tre, mi = registration_pipeline(
     fixed_px_sz=0.5,
     moving_px_sz=0.5,
     fixed_img="multiplexed",
-    feature_tform="affine"        # used if adv_tform is not "similarity"
+    feature_tform="affine"        # to use a transformation other than default "similarity"
 )
 
 print("TRE:", tre)

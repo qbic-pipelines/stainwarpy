@@ -10,6 +10,17 @@ This file contains parts of code adapted from HistomicsTK
 """
 
 def rgb_to_sda(im_rgb):
+    """
+    From HistomicsTK.
+    Convert RGB image to stain density array (SDA) using Beer-Lambert law. 
+
+    Parameters:
+    - im_rgb (ndarray): Input RGB image
+
+    Returns:
+    - im_sda (ndarray): Stain density array
+    """
+
     is_matrix = im_rgb.ndim == 2
     if is_matrix:
         im_rgb = im_rgb.T
@@ -27,6 +38,17 @@ def rgb_to_sda(im_rgb):
 
 
 def sda_to_rgb(im_sda):
+    """
+    From HistomicsTK.
+    Convert stain density array (SDA) back to RGB image using inverse Beer-Lambert law.
+
+    Parameters:
+    - im_sda (ndarray): Stain density array
+
+    Returns:
+    - im_rgb (ndarray): Reconstructed RGB image
+    """
+
     is_matrix = im_sda.ndim == 2
     if is_matrix:
         im_sda = im_sda.T
@@ -39,6 +61,18 @@ def sda_to_rgb(im_sda):
 
 
 def colour_deconvolusion(hne_init, W):
+    """
+    From HistomicsTK.
+    Perform color deconvolution on an image using a given stain matrix.
+
+    Parameters:
+    - hne_init (ndarray): Input image
+    - W (ndarray): Stain matrix
+
+    Returns:
+    - Output (namedtuple): Contains deconvolved stains and related information
+    """
+
     w = np.array(W)
 
     if w.shape[1] < 3:
@@ -87,6 +121,15 @@ def colour_deconvolusion(hne_init, W):
 
 
 def colour_deconvolusion_preprocessing_HnE(hne_init):
+    """
+    Color deconvolution preprocessing for HnE stained images.
+
+    Parameters:
+    - hne_init (ndarray): Input HnE stained image
+
+    Returns:
+    - hne_deconv (ndarray): Hematoxylin channel after color deconvolution
+    """
 
     # create stain matrix (columns correspond to stains hematoxylin, eosin, null)
     W = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11], [0.0, 0.0, 0.0]]).T
@@ -100,6 +143,15 @@ def colour_deconvolusion_preprocessing_HnE(hne_init):
 
 
 def get_image_size_ome_tiff(file_path):
+    """
+    Get image size from an OME-TIFF file.
+
+    Parameters:
+    - file_path (str): Path to the OME-TIFF file
+
+    Returns:
+    - shape (tuple): Shape of the image (height, width)
+    """
 
     with TiffFile(file_path) as tif:
         img = tif.series[0].asarray()
@@ -109,6 +161,17 @@ def get_image_size_ome_tiff(file_path):
 
 
 def get_pixel_size_ome_tiff(file_path):
+    """
+    Get pixel size from an OME-TIFF file.
+
+    Parameters:
+    - file_path (str): Path to the OME-TIFF file
+
+    Returns:
+    - px (float): Physical size of a pixel in X direction (µm)
+    - py (float): Physical size of a pixel in Y direction (µm)
+    """
+    
     with TiffFile(file_path) as tif:
         ome = tif.ome_metadata
         if ome is None:
@@ -128,6 +191,16 @@ def get_pixel_size_ome_tiff(file_path):
 
 
 def load_image_data(file_path):
+    """
+    Load image data from a file and arrange dimensions as (Y, X, C) or (Y, X).
+
+    Parameters:
+    - file_path (str): Path to the image file
+
+    Returns:
+    - img (ndarray): Loaded image
+    """
+    
     if file_path.endswith(".tif") or file_path.endswith(".tiff"):
         img_raw = imread(file_path)
         img = np.array(img_raw) 
@@ -140,12 +213,35 @@ def load_image_data(file_path):
 
 
 def extract_channel(img, channel_index):
+    """
+    Extract a specific channel from a multi-channel image.
+
+    Parameters:
+    - img (ndarray): Input multi-channel image
+    - channel_index (int): Index of the channel to extract
+
+    Returns:
+    - channel_img (ndarray): Extracted channel image
+    """
     
     return img[:, :, channel_index]
 
 
 
 def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
+    """
+    Load and scale fixed and moving images based on their pixel sizes, moving image is scaled to match fixed image.
+
+    Parameters:
+    - fixed_path (str): Path to the fixed image file
+    - moving_path (str): Path to the moving image file
+    - fixed_px_sz (float or None): Pixel size of the fixed image (µm). If None, will attempt to read from metadata.
+    - moving_px_sz (float or None): Pixel size of the moving image (µm). If None, will attempt to read from metadata.
+
+    Returns:
+    - fixed_init (ndarray): Loaded and scaled fixed image
+    - moving_init (ndarray): Loaded moving image
+    """
 
     if fixed_px_sz is None:
         try:
@@ -174,6 +270,7 @@ def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
     elif fixed_img.shape[2] == 3:
         fixed_init = resize(fixed_img, (int(fixed_img.shape[0]/scale), int(fixed_img.shape[1]/scale), fixed_img.shape[2]), anti_aliasing=True)
     elif fixed_img.shape[2] > 3:
+        # extract specified channel (DAPI) if multiplexed
         fixed_ch_img = extract_channel(fixed_img, 0)
         fixed_init = resize(fixed_ch_img, (int(fixed_ch_img.shape[0]/scale), int(fixed_ch_img.shape[1]/scale)), anti_aliasing=True)
     fixed_init = fixed_init*255
@@ -192,7 +289,19 @@ def save_ome_tiff(
     physical_size_x=None,
     physical_size_y=None,
     source_ome_xml=None):
+    """
+    Save an image as an OME-TIFF file with specified metadata.
 
+    Parameters:
+    - img (ndarray): Image to be saved
+    - out_path (str): Output file path
+    - channel_names (list of str or None): Names of the channels. If None, will attempt to read from source_ome_xml or auto-generate.
+    - physical_size_x (float or None): Physical size of a pixel in X direction (µm). 
+    - physical_size_y (float or None): Physical size of a pixel in Y direction (µm)
+    - source_ome_xml (str or None): Source OME-XML metadata to extract channel names if channel_names is None
+    """
+
+    # prepare data in CYX format
     if img.ndim == 2:
         # grayscale (Y, X)
         Y, X = img.shape
@@ -217,7 +326,7 @@ def save_ome_tiff(
     else:
         raise ValueError(f"Unsupported ndim={img.ndim}")
 
-    
+    # determine channel names
     if channel_names is None:
         try:
             if source_ome_xml is not None:
@@ -232,7 +341,7 @@ def save_ome_tiff(
     if len(channel_names) != C:
         raise ValueError(f"Channel name count {len(channel_names)} does not match C={C}")
     
-    
+   # save OME-TIFF 
     with TiffWriter(out_path, bigtiff=True) as tif:
          metadata={
              'axes': 'CYX',

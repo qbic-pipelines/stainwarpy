@@ -22,6 +22,22 @@ def register(
     moving_px_sz: float = typer.Option(None, help="Pixel size of the moving image (if image is not .ome.tif)"),
     feature_tform: str = typer.Option('similarity', help="Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended.", show_default=True)
 ):
+    """
+    Sub-command to register H&E stained images to multiplexed images using feature based registration. Saves registered image, transformation maps and registration metrics to the specified output folder.
+
+    Parameters:
+    - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - moving_path (str): Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - output_folder (str): Folder to save the registered images and metrics
+    - fixed_img (str): Type of fixed image: ['multiplexed', 'hne']
+    - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
+    - moving_px_sz (float, optional): Pixel size of the moving image (if image is not .ome.tif)
+    - feature_tform (str, optional): Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended. 
+
+    Returns:
+    - None
+    """
+    
     # run the pipeline
     transformation_map, final_img, tre, mi = registration_pipeline(
         fixed_path,
@@ -68,6 +84,18 @@ def extract_channel_cmd(
     output_folder_path: str = typer.Argument(..., help="Folder to save the image with extracted channel"),
     channel_idx: int = typer.Option(0, help="Channel index to extract (Default = 0 for DAPI)", show_default=True),
 ):
+    """
+    Sub-command to extract a specific channel from a multi-channel image and save it as a separate image.
+
+    Parameters:
+    - file_path (str): Path to the input image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - output_folder_path (str): Folder to save the image with extracted channel
+    - channel_idx (int, optional): Channel index to extract (Default = 0 for DAPI)
+
+    Returns:
+    - None
+    """
+
     img = load_image_data(file_path)
     img_ch = extract_channel(img, channel_idx)
 
@@ -87,6 +115,21 @@ def transform_seg_mask_cmd(
     moving_px_sz: str = typer.Argument(..., help="Path to moving image if .ome.tiff or Pixel size of the moving image"),
     fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)", show_default=True)
 ):
+    """
+    Sub-command to transform a segmentation mask from the moving image space to the fixed image space using the provided transformation map.
+    
+    Parameters:
+    - mask_path (str): Path to the segmentation mask of the moving image (.npy)
+    - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - output_folder_path (str): Folder to save the transformed segmentation mask
+    - tform_map_path (str): Path to the transformation map
+    - moving_px_sz (str): Path to moving image if .ome.tiff or Pixel size of the moving image
+    - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
+
+    Returns:
+    - None
+    """
+    
     # load mask
     mask = np.load(mask_path) # will need to change according to mask format
     print(f"Loaded segmentation mask.")
