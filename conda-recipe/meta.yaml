@@ -1,34 +1,46 @@
+{% set name = "stainwarpy" %}
+{% set version = "0.1.6" %}
+
 package:
-  name: stainwarpy
-  version: "0.1.6"
+  name: {{ name }}
+  version: {{ version }}
 
 source:
-  path: ..
+  url: https://pypi.io/packages/source/s/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: <FILL_THIS_IN>
 
 build:
   number: 0
-  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . --no-deps -vv"
 
 requirements:
   host:
-    - python >=3.11
+    - python >=3.11,<3.13
     - pip
     - setuptools
-    - numpy 2.2.6
-    - scipy 1.16.3
-    - scikit-image 0.25.2
-    - imagecodecs 2025.11.11
-    - tifffile 2025.5.10
+
   run:
-    - python >=3.11
-    - numpy 2.2.6
-    - scipy 1.16.3
-    - scikit-image 0.25.2
-    - imagecodecs 2025.11.11
-    - tifffile 2025.5.10
-    - typer 0.20.0
+    - python >=3.11,<3.13
+    - numpy ==2.2.6
+    - scipy ==1.16.3
+    - scikit-image ==0.25.2
+    - imagecodecs ==2025.11.11
+    - tifffile ==2025.5.10
+    - typer ==0.20.0
+
+test:
+  imports:
+    - stainwarpy
+  commands:
+    - stainwarpy --help
 
 about:
-  home: "https://github.com/tckumarasekara/stainwarpy"
+  home: https://github.com/tckumarasekara/stainwarpy
   license: MIT
-  summary: "Tools for image registration between multiplexed and HnE stained tissue images"
+  license_file: LICENSE
+  summary: "Tools for image registration between multiplexed and H&E stained tissue images"
+
+extra:
+  recipe-maintainers:
+    - tckumarasekara
