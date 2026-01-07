@@ -6,8 +6,8 @@ package:
   version: {{ version }}
 
 source:
-  url: https://pypi.io/packages/source/s/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: <FILL_THIS_IN>
+  url: https://github.com/tckumarasekara/{{ name }}/releases/tag/v{{ version }}/stainwarpy-{{ version }}.tar.gz
+  sha256: d19dc11ce752dcee6fee31675b0abdbaf9a893040aa9aa1074eab53713f4e4ba
 
 build:
   number: 0
@@ -28,6 +28,7 @@ requirements:
     - imagecodecs ==2025.11.11
     - tifffile ==2025.5.10
     - typer ==0.20.0
+
 
 test:
   imports:
