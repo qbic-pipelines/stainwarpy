@@ -1,0 +1,2 @@
+[console_scripts]
+stainwarpy = stainwarpy.reg_cli:main

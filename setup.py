@@ -5,12 +5,12 @@ setup(
     version="0.1.7",
     packages=find_packages(),
     install_requires=[
-        "numpy==2.2.6",
-        "tifffile==2025.5.10",
-        "imagecodecs==2025.11.11",
-        "scikit-image==0.25.2",
-        "scipy==1.16.3",
-        "typer[all]==0.20.0",
+        "numpy>=2.2",
+        "tifffile>=2025.5",
+        "imagecodecs>=2025.11",
+        "scikit-image>=0.25",
+        "scipy>=1.16",
+        "typer[all]>=0.20",
     ],
     python_requires=">=3.11",
     extras_require={

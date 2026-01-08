@@ -6,7 +6,7 @@ package:
   version: {{ version }}
 
 source:
-  url: https://github.com/tckumarasekara/{{ name }}/releases/tag/v{{ version }}/stainwarpy-{{ version }}.tar.gz
+  url: https://github.com/tckumarasekara/{{ name }}/releases/download/v{{ version }}/stainwarpy-{{ version }}.tar.gz
   sha256: d19dc11ce752dcee6fee31675b0abdbaf9a893040aa9aa1074eab53713f4e4ba
 
 build:
@@ -22,12 +22,12 @@ requirements:
 
   run:
     - python >=3.11,<3.13
-    - numpy ==2.2.6
-    - scipy ==1.16.3
-    - scikit-image ==0.25.2
-    - imagecodecs ==2025.11.11
-    - tifffile ==2025.5.10
-    - typer ==0.20.0
+    - numpy >=2.2
+    - scipy >=1.16
+    - scikit-image >=0.25
+    - imagecodecs >=2025.11.11
+    - tifffile >=2025.5.10
+    - typer >=0.20
 
 
 test:
