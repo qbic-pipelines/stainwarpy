@@ -14,30 +14,54 @@ app = typer.Typer(help="Register H&E stained images to multiplexed images using 
 
 @app.command(name="register")
 def register(
-    fixed_path: str = typer.Argument(..., help="Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
-    moving_path: str = typer.Argument(..., help="Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)"),
+    multiplexed_path: str = typer.Argument(..., help="Path to the multiplexed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
+    hne_path: str = typer.Argument(..., help="Path to the hne image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     output_folder: str = typer.Argument(..., help="Folder to save the registered images and metrics"),
-    final_img_sz: str = typer.Argument(..., help="Pixel size for final image: ['fixed', 'moving']"),
-    fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)"),
-    moving_px_sz: float = typer.Option(None, help="Pixel size of the moving image (if image is not .ome.tif)"),
+    fixed_img: str = typer.Argument(..., help="Which image to use as fixed image: ['multiplexed', 'hne']"),
+    final_img_sz: str = typer.Argument(..., help="Pixel size for final image: ['multiplexed', 'hne']"),
+    multiplexed_px_sz: float = typer.Option(None, help="Pixel size of the multiplexed image (if image is not .ome.tif)"),
+    hne_px_sz: float = typer.Option(None, help="Pixel size of the hne image (if image is not .ome.tif)"),
     feature_tform: str = typer.Option('similarity', help="Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended.", show_default=True)
 ):
     """
     Sub-command to register H&E stained images to multiplexed images using feature based registration. Saves registered image, transformation maps and registration metrics to the specified output folder.
 
     Parameters:
-    - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
-    - moving_path (str): Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - multiplexed_path (str): Path to the multiplexed image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - hne_path (str): Path to the hne image (.tif/.tiff/.ome.tif/.ome.tiff)
     - output_folder (str): Folder to save the registered images and metrics
-    - final_img_sz (str): Pixel size for final image: ['fixed', 'moving']
-    - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
-    - moving_px_sz (float, optional): Pixel size of the moving image (if image is not .ome.tif)
+    - fixed_img (str): Which image to use as fixed image: ['multiplexed', 'hne']
+    - final_img_sz (str): Pixel size for final image: ['multiplexed', 'hne']
+    - multiplexed_px_sz (float, optional): Pixel size of the multiplexed image (if image is not .ome.tif)
+    - hne_px_sz (float, optional): Pixel size of the hne image (if image is not .ome.tif)
     - feature_tform (str, optional): Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended. 
 
     Returns:
     - None
     """
-    
+
+    if fixed_img == 'multiplexed':
+        fixed_path = multiplexed_path
+        moving_path = hne_path
+        fixed_px_sz = multiplexed_px_sz
+        moving_px_sz = hne_px_sz
+        if final_img_sz not in ['multiplexed', 'hne']:
+            raise ValueError("final_img_sz must be either 'multiplexed' or 'hne'.")
+        final_img_sz = 'fixed' if final_img_sz == 'multiplexed' else 'moving'
+
+    elif fixed_img == 'hne':
+        fixed_path = hne_path
+        moving_path = multiplexed_path
+        fixed_px_sz = hne_px_sz
+        moving_px_sz = multiplexed_px_sz
+        if final_img_sz not in ['multiplexed', 'hne']:
+            raise ValueError("final_img_sz must be either 'multiplexed' or 'hne'.")
+        final_img_sz = 'fixed' if final_img_sz == 'hne' else 'moving'
+        
+    else:
+        raise ValueError("fixed_img must be either 'multiplexed' or 'hne'.")
+
+
     # run the pipeline
     transformation_map, final_img, tre, mi = registration_pipeline(
         fixed_path,
@@ -105,8 +129,14 @@ def extract_channel_cmd(
     img_ch = extract_channel(img, channel_idx)
 
     os.makedirs(output_folder_path, exist_ok=True)
-    img_path = os.path.join(output_folder_path, f"multiplexed_channel_{channel_idx}.tif")
-    imwrite(img_path, img_ch)
+
+    try:
+        px, py = get_pixel_size_ome_tiff(file_path)
+    except:
+        px, py = None, None
+
+    img_path = os.path.join(output_folder_path, f"multiplexed_single_channel_img.ome.tif")
+    save_ome_tiff(img_ch, img_path, physical_size_x=px, physical_size_y=py)
     print(f"Image with extracted channel saved to {img_path}")
 
 
@@ -114,30 +144,54 @@ def extract_channel_cmd(
 @app.command(name="transform-seg-mask")
 def transform_seg_mask_cmd(
     mask_path: str = typer.Argument(..., help="Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)"),
-    fixed_path: str = typer.Argument(..., help="Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
-    moving_path: str = typer.Argument(..., help="Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)"),
+    multiplexed_path: str = typer.Argument(..., help="Path to the multiplexed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
+    hne_path: str = typer.Argument(..., help="Path to the hne image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     output_folder_path: str = typer.Argument(..., help="Folder to save the transformed segmentation mask"),
     tform_map_path: str = typer.Argument(..., help="Path to the transformation map"),
-    final_mask_sz: str = typer.Argument(..., help="Pixel size for final mask: ['fixed', 'moving']"),
-    fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)", show_default=True),
-    moving_px_sz: float = typer.Option(None, help="Pixel size of the moving image (if image is not .ome.tif)", show_default=True)
+    fixed_img: str = typer.Argument(..., help="Which image used as fixed image: ['multiplexed', 'hne']"),
+    final_mask_sz: str = typer.Argument(..., help="Pixel size for final mask: ['multiplexed', 'hne']"),
+    multiplexed_px_sz: float = typer.Option(None, help="Pixel size of the multiplexed image (if image is not .ome.tif)", show_default=True),
+    hne_px_sz: float = typer.Option(None, help="Pixel size of the hne image (if image is not .ome.tif)", show_default=True)
 ):
     """
     Sub-command to transform a segmentation mask from the moving image space to the fixed image space using the provided transformation map.
     
     Parameters:
     - mask_path (str): Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)
-    - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
-    - moving_path (str): Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - multiplexed_path (str): Path to the multiplexed image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - hne_path (str): Path to the hne image (.tif/.tiff/.ome.tif/.ome.tiff)
     - output_folder_path (str): Folder to save the transformed segmentation mask
     - tform_map_path (str): Path to the transformation map
-    - final_mask_sz (str): Pixel size for final mask: ['fixed', 'moving']
-    - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
-    - moving_px_sz (float, optional): Pixel size of the moving image (if image is not .ome.tif)
+    - fixed_img (str): Which image used as fixed image: ['multiplexed', 'hne']
+    - final_mask_sz (str): Pixel size for final mask: ['multiplexed', 'hne']
+    - multiplexed_px_sz (float, optional): Pixel size of the multiplexed image (if image is not .ome.tif)
+    - hne_px_sz (float, optional): Pixel size of the hne image (if image is not .ome.tif)
 
     Returns:
     - None
     """
+
+    if fixed_img == 'multiplexed':
+        fixed_path = multiplexed_path
+        moving_path = hne_path
+        fixed_px_sz = multiplexed_px_sz
+        moving_px_sz = hne_px_sz
+        if final_mask_sz not in ['multiplexed', 'hne']:
+            raise ValueError("final_mask_sz must be either 'multiplexed' or 'hne'.")
+        final_mask_sz = 'fixed' if final_mask_sz == 'multiplexed' else 'moving'
+
+    elif fixed_img == 'hne':
+        fixed_path = hne_path
+        moving_path = multiplexed_path
+        fixed_px_sz = hne_px_sz
+        moving_px_sz = multiplexed_px_sz
+        if final_mask_sz not in ['multiplexed', 'hne']:
+            raise ValueError("final_mask_sz must be either 'multiplexed' or 'hne'.")
+        final_mask_sz = 'fixed' if final_mask_sz == 'hne' else 'moving'
+
+    else:
+        raise ValueError("fixed_img must be either 'multiplexed' or 'hne'.")
+    
     
     # load mask
     if mask_path.endswith('.tif') or mask_path.endswith('.tiff'):
@@ -206,12 +260,11 @@ def transform_seg_mask_cmd(
     os.makedirs(output_folder_path, exist_ok=True)
     
     save_ome_mask(moved_mask, 
-                  os.path.join(output_folder_path, "transformed_segmentation_mask.ome.tiff"),
+                  os.path.join(output_folder_path, "transformed_segmentation_mask.ome.tif"),
                   physical_size_x=fixed_px_sz if final_mask_sz == 'fixed' else moving_px_sz,
                   physical_size_y=fixed_px_sz if final_mask_sz == 'fixed' else moving_px_sz,
                   source_ome_xml=ome_xml)
-    print(f"Transformed segmentation mask saved to {output_folder_path}/transformed_segmentation_mask.ome.tiff")
-
+    print(f"Transformed segmentation mask saved to {output_folder_path}/transformed_segmentation_mask.ome.tif")
 
 
 def main():

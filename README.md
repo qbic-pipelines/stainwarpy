@@ -54,23 +54,24 @@ stainwarpy register <fixed_path> <moving_path> <output_folder> <final_img_sz> [o
 #### Examples:
 
 ```bash
-stainwarpy register data/fixed_img.ome.tiff data/moving_img.ome.tiff ../output fixed
+stainwarpy register data/fixed_img.ome.tiff data/moving_img.ome.tiff ../output multiplexed multiplexed
 ```
 ```bash
-stainwarpy register data/fixed_img.tif data/moving_img.tif ../output fixed --fixed-px-sz 0.21 --moving-px-sz 0.52
+stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed multiplexed --multiplexed-px-sz 0.21 --hne-px-sz 0.52
 ```
 
 #### Arguments:
 
-- **fixed_path**: Path to the fixed image (H&E or DAPI or Multiplexed image path (.tif/.tiff./.ome.tif/.ome.tiff))
-- **moving_path**: Path to the moving image (H&E or DAPI or Multiplexed image path (.tif/.tiff./.ome.tif/.ome.tiff))
+- **multiplexed_path**: Path to the multiplexed image (.tif/.tiff./.ome.tif/.ome.tiff)
+- **hne_path**: Path to the H&E image (.tif/.tiff./.ome.tif/.ome.tiff)
 - **output_folder**: Folder to save the registered images and metrics  
-- **final_img_sz**: Final moving image pixel size to be kept in the size of `fixed` or `moving` image pixel size  
+- **fixed_img**: Which one to be taken as fixed image `multiplexed` or `hne`
+- **final_img_sz**: Final moving image pixel size to be kept in the size of `multiplexeed` or `hne` image pixel size  
 
 #### Options:
 
-- `--fixed-px-sz` : Pixel size of the fixed image (no need to provide for ome.tiff, so default: None)
-- `--moving-px-sz` : Pixel size of the moving image (no need to provide for ome.tiff, so default: None)
+- `--multiplexed-px-sz` : Pixel size of the multiplexed image (no need to provide for ome.tiff, so default: None)
+- `--hne-px-sz` : Pixel size of the H&E image (no need to provide for ome.tiff, so default: None)
 - `--feature-tform` : Feature transformation method: `similarity` or`affine` or `projective` (default: `similarity`)
 
 #### Output
@@ -97,7 +98,7 @@ stainwarpy extract-channel <file_path> <output_folder_path> [--channel-idx N]
  
 #### Output
 
-- **multiplexed_channel_{channel_idx}.tif** - Image with the extracted channel saved in the specified output folder
+- **multiplexed_single_channel_img.ome.tif** - Image with the extracted channel saved in the specified output folder
 
 
 ### Transform segmentation Masks
@@ -105,26 +106,27 @@ stainwarpy extract-channel <file_path> <output_folder_path> [--channel-idx N]
 Transform segmentation masks based on the transformation maps produced with the command `register`. 
 
 ```bash
-stainwarpy transform-seg-mask <mask_path> <fixed_path> <moving_path> <output_folder_path> <tform_map_path> <fixed/moving> [options]
+stainwarpy transform-seg-mask <mask_path> <fixed_path> <moving_path> <output_folder_path> <tform_map_path> <multiplexed/hne> <multiplexed/hne> [options]
 ```
 
 #### Arguments
 
 - **mask_path** : Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)
-- **fixed_path** : Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
-- **moving_path** : Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
+- **multiplexed_path** : Path to the multiplexed image (.tif/.tiff/.ome.tif/.ome.tiff)
+- **hne_path** : Path to the H&E image (.tif/.tiff/.ome.tif/.ome.tiff)
 - **output_folder_path** : Folder to save the transformed segmentation mask
 - **tform_map_path** : Path to the transformation map
-- **final_mask_sz** : Pixel size for final mask: ['fixed', 'moving']
+- **fixed_img** : Which image taken as fixed image `multiplexed` or `hne`
+- **final_mask_sz** : Pixel size for final mask: `multiplexed` or `hne`
 
 #### Options
 
-- `--fixed-px-sz` : Pixel size of the fixed image (no need to provide for ome.tiff, so default: None)
-- `--moving-px-sz` : Pixel size of the moving image (no need to provide for ome.tiff, so default: None)
+- `--multiplexed-px-sz` : Pixel size of the multiplexed image (no need to provide for ome.tiff, so default: None)
+- `--hne-px-sz` : Pixel size of the H&E image (no need to provide for ome.tiff, so default: None)
 
 #### Output
 
-- **transformed_segmentation_mask.ome.tiff** : The segmentation mask transformed to the fixed image coordinate space saved in the specified output folder
+- **transformed_segmentation_mask.ome.tif** : The segmentation mask transformed to the fixed image coordinate space saved in the specified output folder
 
 
 ---

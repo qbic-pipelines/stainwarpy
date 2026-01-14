@@ -186,6 +186,31 @@ def get_image_size_ome_tiff(file_path):
 
 
 
+def get_pixel_info_ome_xml(ome_xml):
+    """
+    Get pixel size from OME-XML metadata.
+
+    Parameters:
+    - ome_xml (str): OME-XML metadata as a string
+
+    Returns:
+    - px (float): Physical size of a pixel in X direction (µm)
+    - py (float): Physical size of a pixel in Y direction (µm)
+    """
+
+    root = ET.fromstring(ome_xml)
+    pixels = root.find(".//{*}Pixels")   
+
+    px = pixels.get("PhysicalSizeX")
+    py = pixels.get("PhysicalSizeY")
+
+    px = float(px) if px is not None else None
+    py = float(py) if py is not None else None
+
+    return px, py
+
+
+
 def get_pixel_size_ome_tiff(file_path):
     """
     Get pixel size from an OME-TIFF file.
@@ -203,14 +228,7 @@ def get_pixel_size_ome_tiff(file_path):
         if ome is None:
             raise ValueError(f"Not an OME-TIFF: {file_path}")
 
-        root = ET.fromstring(ome)
-        pixels = root.find(".//{*}Pixels")   
-
-        px = pixels.get("PhysicalSizeX")
-        py = pixels.get("PhysicalSizeY")
-
-        px = float(px) if px is not None else None
-        py = float(py) if py is not None else None
+        px, py = get_pixel_info_ome_xml(ome)
 
         return px, py
 
@@ -332,6 +350,15 @@ def save_ome_tiff(
 
     else:
         raise ValueError(f"Unsupported ndim={img.ndim}")
+    
+    """
+    # determine pixel sizes
+    if (physical_size_x is None or physical_size_y is None) and source_ome_xml is not None:
+        try:
+            physical_size_x, physical_size_y = get_pixel_info_ome_xml(source_ome_xml)
+        except:
+            pass    
+    """   
 
     # determine channel names
     if channel_names is None:
@@ -346,7 +373,8 @@ def save_ome_tiff(
             channel_names = [f"Channel_{i}" for i in range(C)]
 
     if len(channel_names) != C:
-        raise ValueError(f"Channel name count {len(channel_names)} does not match C={C}")
+        channel_names = [f"Channel_{i}" for i in range(C)]
+        #raise ValueError(f"Channel name count {len(channel_names)} does not match C={C}")
     
    # save OME-TIFF 
     with TiffWriter(out_path, bigtiff=True) as tif:
