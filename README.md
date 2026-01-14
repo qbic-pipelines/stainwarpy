@@ -6,6 +6,7 @@
 
 [![Docker](https://img.shields.io/badge/Docker-stainwarpy--cli-blue)](https://hub.docker.com/repository/docker/tckum/stainwarpy-cli)
 [![PyPI version](https://img.shields.io/pypi/v/stainwarpy)](https://pypi.org/project/stainwarpy/)
+[![Bioconda version](https://img.shields.io/conda/vn/bioconda/stainwarpy.svg)](https://anaconda.org/bioconda/stainwarpy)
 
 **stainwarpy** is a command-line tool and a Python package for registering H&E stained and multiplexed tissue images. It provides a feature based registration pipeline, saving registered images, transformation maps and evaluation metrics.
 
@@ -14,7 +15,7 @@
 
 - Register H&E images and multiplexed images (after extracting DAPI channel) using transformations.
 - Supports feature-based registration.
-- Outputs registered images (in the pixel size of moving image), transformation maps and evaluation metrics (TRE and Mutual Information).
+- Outputs registered images, transformation maps and evaluation metrics (TRE and Mutual Information).
 - Transforms segmentation masks based on the computed transformations
 
 
@@ -32,6 +33,14 @@ You can install **stainwarpy** using pip:
 pip install stainwarpy
 ```
 
+or
+
+Bioconda (for Linux/macOS):
+
+```bash
+conda install -c bioconda stainwarpy
+```
+
 ---
 
 ## Usage as a command-line tool
@@ -45,10 +54,10 @@ stainwarpy register <fixed_path> <moving_path> <output_folder> <fixed_img> [opti
 #### Examples:
 
 ```bash
-stainwarpy register data/fixed_img.ome.tiff data/moving_img.ome.tiff ../output multiplexed
+stainwarpy register data/fixed_img.ome.tiff data/moving_img.ome.tiff ../output fixed
 ```
 ```bash
-stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed --fixed-px-sz 0.21 --moving-px-sz 0.52
+stainwarpy register data/fixed_img.tif data/moving_img.tif ../output fixed --fixed-px-sz 0.21 --moving-px-sz 0.52
 ```
 
 #### Arguments:
@@ -56,7 +65,7 @@ stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed
 - **fixed_path**: Path to the fixed image (H&E or DAPI or Multiplexed image path (.tif/.tiff./.ome.tif/.ome.tiff))
 - **moving_path**: Path to the moving image (H&E or DAPI or Multiplexed image path (.tif/.tiff./.ome.tif/.ome.tiff))
 - **output_folder**: Folder to save the registered images and metrics  
-- **fixed_img**: Type of fixed image: `multiplexed` or `hne`  
+- **final_img_sz**: Final moving image pixel size to be kept in the size of `fixed` or `moving` image pixel size  
 
 #### Options:
 
@@ -68,7 +77,7 @@ stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed
 
 After running registration, the following files/folders will be generated and saved in the specified output folder:
 
-- **registration_metrics.json** — TRE and Mutual Information  
+- **registration_metrics_tfrom_map.json** — TRE and Mutual Information and transformation map in an user friendly file format  
 - **0_final_channel_image.ome.tif** — Registered image (in the pixel size of moving image)
 - **feature_based_transformation_map.npy** — Transformation map 
 
@@ -96,24 +105,26 @@ stainwarpy extract-channel <file_path> <output_folder_path> [--channel-idx N]
 Transform segmentation masks based on the transformation maps produced with the command `register`. 
 
 ```bash
-stainwarpy transform-seg-mask <mask_path> <fixed_path> <output_folder_path> <tform_map_path> <moving_px_sz> [--fixed-px-sz]
+stainwarpy transform-seg-mask <mask_path> <fixed_path> <moving_path> <output_folder_path> <tform_map_path> <fixed/moving> [options]
 ```
 
 #### Arguments
 
-- **mask_path** : Path to the segmentation mask of the moving image (.npy)
+- **mask_path** : Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)
 - **fixed_path** : Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
+- **moving_path** : Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
 - **output_folder_path** : Folder to save the transformed segmentation mask
 - **tform_map_path** : Path to the transformation map
-- **moving_px_sz** : Path to moving image if .ome.tiff or Pixel size of the moving image
+- **final_mask_sz** : Pixel size for final mask: ['fixed', 'moving']
 
 #### Options
 
 - `--fixed-px-sz` : Pixel size of the fixed image (no need to provide for ome.tiff, so default: None)
+- `--moving-px-sz` : Pixel size of the moving image (no need to provide for ome.tiff, so default: None)
 
 #### Output
 
-- **transformed_segmentation_mask.npy** : The segmentation mask transformed to the fixed image coordinate space saved in the specified output folder
+- **transformed_segmentation_mask.ome.tiff** : The segmentation mask transformed to the fixed image coordinate space saved in the specified output folder
 
 
 ---
@@ -133,7 +144,7 @@ tform_map, final_img, tre, mi = registration_pipeline(
     moving_path="moving_image.tif",
     fixed_px_sz=0.5,
     moving_px_sz=0.5,
-    fixed_img="multiplexed",
+    final_img_sz="fixed",
     feature_tform="affine"        # to use a transformation other than default "similarity"
 )
 

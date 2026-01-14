@@ -5,7 +5,7 @@ import json
 from tifffile import imwrite, TiffFile
 from skimage.transform import AffineTransform, resize
 from .regPipeline import registration_pipeline
-from .preprocess import extract_channel, load_image_data, get_pixel_size_ome_tiff, save_ome_tiff
+from .preprocess import extract_channel, load_image_data, get_pixel_size_ome_tiff, save_ome_tiff, save_ome_mask
 from .reg import transform_seg_mask
 
 
@@ -17,7 +17,7 @@ def register(
     fixed_path: str = typer.Argument(..., help="Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     moving_path: str = typer.Argument(..., help="Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     output_folder: str = typer.Argument(..., help="Folder to save the registered images and metrics"),
-    fixed_img: str = typer.Argument(..., help="Type of fixed image: ['multiplexed', 'hne']"),
+    final_img_sz: str = typer.Argument(..., help="Pixel size for final image: ['fixed', 'moving']"),
     fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)"),
     moving_px_sz: float = typer.Option(None, help="Pixel size of the moving image (if image is not .ome.tif)"),
     feature_tform: str = typer.Option('similarity', help="Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended.", show_default=True)
@@ -29,7 +29,7 @@ def register(
     - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
     - moving_path (str): Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
     - output_folder (str): Folder to save the registered images and metrics
-    - fixed_img (str): Type of fixed image: ['multiplexed', 'hne']
+    - final_img_sz (str): Pixel size for final image: ['fixed', 'moving']
     - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
     - moving_px_sz (float, optional): Pixel size of the moving image (if image is not .ome.tif)
     - feature_tform (str, optional): Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended. 
@@ -44,17 +44,18 @@ def register(
         moving_path,
         fixed_px_sz,
         moving_px_sz,
-        fixed_img,
+        final_img_sz,
         feature_tform=feature_tform
     )
 
     os.makedirs(output_folder, exist_ok=True)
 
-    # save registration metrics
-    metrics_output_path = os.path.join(output_folder, "registration_metrics.json")
+    # save registration metrics and tfrom map in json
+    metrics_output_path = os.path.join(output_folder, "registration_metrics_tfrom_map.json")
 
+    params_list = transformation_map.params.tolist()
     with open(metrics_output_path, "w") as f:
-        json.dump({"TRE": tre, "Mutual Information": mi}, f)
+        json.dump({"TRE": tre, "Mutual Information": mi, "Transformation Map": params_list}, f)
     print(f"Registration metrics saved to {metrics_output_path}")
 
     # save registered image
@@ -66,7 +67,11 @@ def register(
         pass
 
     final_img_path = os.path.join(output_folder, "0_final_channel_image.ome.tif")
-    save_ome_tiff(final_img, final_img_path, physical_size_x=moving_px_sz, physical_size_y=moving_px_sz, source_ome_xml=ome_xml)
+
+    if final_img_sz == 'fixed':
+        save_ome_tiff(final_img, final_img_path, physical_size_x=fixed_px_sz, physical_size_y=fixed_px_sz, source_ome_xml=ome_xml)
+    elif final_img_sz == 'moving':
+        save_ome_tiff(final_img, final_img_path, physical_size_x=moving_px_sz, physical_size_y=moving_px_sz, source_ome_xml=ome_xml)
 
     print(f"Registered image saved to {final_img_path}")
 
@@ -108,34 +113,43 @@ def extract_channel_cmd(
 
 @app.command(name="transform-seg-mask")
 def transform_seg_mask_cmd(
-    mask_path: str = typer.Argument(..., help="Path to the segmentation mask of the moving image (.npy)"),
+    mask_path: str = typer.Argument(..., help="Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)"),
     fixed_path: str = typer.Argument(..., help="Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)"),
+    moving_path: str = typer.Argument(..., help="Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)"),
     output_folder_path: str = typer.Argument(..., help="Folder to save the transformed segmentation mask"),
     tform_map_path: str = typer.Argument(..., help="Path to the transformation map"),
-    moving_px_sz: str = typer.Argument(..., help="Path to moving image if .ome.tiff or Pixel size of the moving image"),
-    fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)", show_default=True)
+    final_mask_sz: str = typer.Argument(..., help="Pixel size for final mask: ['fixed', 'moving']"),
+    fixed_px_sz: float = typer.Option(None, help="Pixel size of the fixed image (if image is not .ome.tif)", show_default=True),
+    moving_px_sz: float = typer.Option(None, help="Pixel size of the moving image (if image is not .ome.tif)", show_default=True)
 ):
     """
     Sub-command to transform a segmentation mask from the moving image space to the fixed image space using the provided transformation map.
     
     Parameters:
-    - mask_path (str): Path to the segmentation mask of the moving image (.npy)
+    - mask_path (str): Path to the segmentation mask of the moving image (.ome.tif/.ome.tiff/.tif/.tiff/.npy)
     - fixed_path (str): Path to the fixed image (.tif/.tiff/.ome.tif/.ome.tiff)
+    - moving_path (str): Path to the moving image (.tif/.tiff/.ome.tif/.ome.tiff)
     - output_folder_path (str): Folder to save the transformed segmentation mask
     - tform_map_path (str): Path to the transformation map
-    - moving_px_sz (str): Path to moving image if .ome.tiff or Pixel size of the moving image
+    - final_mask_sz (str): Pixel size for final mask: ['fixed', 'moving']
     - fixed_px_sz (float, optional): Pixel size of the fixed image (if image is not .ome.tif)
+    - moving_px_sz (float, optional): Pixel size of the moving image (if image is not .ome.tif)
 
     Returns:
     - None
     """
     
     # load mask
-    mask = np.load(mask_path) # will need to change according to mask format
+    if mask_path.endswith('.tif') or mask_path.endswith('.tiff'):
+        mask = load_image_data(mask_path)
+    elif mask_path.endswith('.npy'):
+        mask = np.load(mask_path) 
+    else:
+        raise ValueError("Segmentation mask must be a .npy or .tif/.tiff/.ome.tif/.ome.tiff file.")
     print(f"Loaded segmentation mask.")
 
     # load and create transformation parameter objects
-    transformation_maps= AffineTransform(matrix=np.load(os.path.join(tform_map_path)))
+    transformation_maps= AffineTransform(matrix=np.load(tform_map_path))
 
     print("Loaded transformation map.")
 
@@ -150,15 +164,19 @@ def transform_seg_mask_cmd(
         if fixed_px_sz is None:
             raise ValueError("Pixel size information not found in metadata for fixed image. Please provide fixed_px_sz.")
     
-    try:
-        moving_px_sz, _ = get_pixel_size_ome_tiff(moving_px_sz)
-    except:
-        pass
+    if moving_px_sz is None:
+        try:
+            moving_px_sz, _ = get_pixel_size_ome_tiff(moving_path)
+        except:
+            moving_px_sz = None
 
+        if moving_px_sz is None:
+            raise ValueError("Pixel size information not found in metadata for moving image. Please provide moving_px_sz.")
+    
     try:
-        scale = float(moving_px_sz) / fixed_px_sz
+        scale = moving_px_sz / fixed_px_sz
     except:
-        raise ValueError("Could not determine moving image pixel sizes for scaling. Please check the provided pixel size or moving image path (ome.tiff).")
+        raise ValueError("Could not determine scaling factor. Please check the provided pixel sizes or image paths (ome.tiff).")
     
     if len(fixed_init.shape) == 2:
         fixed_init_sc = resize(fixed_init, (int(fixed_init.shape[0]/scale), int(fixed_init.shape[1]/scale)), anti_aliasing=True)
@@ -168,9 +186,31 @@ def transform_seg_mask_cmd(
 
     moved_mask = transform_seg_mask(mask, transformation_maps, output_shape=fixed_img_shape)
 
+    # resize the mask to match provided pixel size
+    target_shape = fixed_init.shape[:2]
+
+    if final_mask_sz == 'fixed':
+        moved_mask = resize(moved_mask, target_shape, order=0, preserve_range=True, anti_aliasing=False).astype(moved_mask.dtype)
+    elif final_mask_sz == 'moving':
+        moved_mask = moved_mask
+
+
+    # save transformed mask
+    ome_xml = None
+    try:
+        with TiffFile(mask_path) as ref:
+            ome_xml = ref.ome_metadata
+    except:
+        pass
+
     os.makedirs(output_folder_path, exist_ok=True)
-    np.save(os.path.join(output_folder_path, "transformed_segmentation_mask.npy"), moved_mask)
-    print(f"Transformed segmentation mask saved to {output_folder_path}/transformed_segmentation_mask.npy")
+    
+    save_ome_mask(moved_mask, 
+                  os.path.join(output_folder_path, "transformed_segmentation_mask.ome.tiff"),
+                  physical_size_x=fixed_px_sz if final_mask_sz == 'fixed' else moving_px_sz,
+                  physical_size_y=fixed_px_sz if final_mask_sz == 'fixed' else moving_px_sz,
+                  source_ome_xml=ome_xml)
+    print(f"Transformed segmentation mask saved to {output_folder_path}/transformed_segmentation_mask.ome.tiff")
 
 
 

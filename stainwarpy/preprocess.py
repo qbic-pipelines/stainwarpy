@@ -142,6 +142,28 @@ def colour_deconvolusion_preprocessing_HnE(hne_init):
 
 
 
+def load_image_data(file_path):
+    """
+    Load image data from a file and arrange dimensions as (Y, X, C) or (Y, X).
+
+    Parameters:
+    - file_path (str): Path to the image file
+
+    Returns:
+    - img (ndarray): Loaded image
+    """
+    
+    if file_path.endswith(".tif") or file_path.endswith(".tiff"):
+        img_raw = imread(file_path)
+        img = np.array(img_raw) 
+
+        return img if (len(img.shape) == 2) or (img.shape[2] < img.shape[0]) else img.transpose(1, 2, 0)
+    
+    else: 
+        raise ValueError("Unsupported file format. Please provide a .tif file.")
+    
+
+
 def get_image_size_ome_tiff(file_path):
     """
     Get image size from an OME-TIFF file.
@@ -152,11 +174,15 @@ def get_image_size_ome_tiff(file_path):
     Returns:
     - shape (tuple): Shape of the image (height, width)
     """
+    try:
+        with TiffFile(file_path) as tif:
+            img = tif.series[0].asarray()
+            shape = img.shape[0:2] if img.ndim == 2 or img.shape[0] < img.shape[2] else img.shape[1:3] 
+    except:
+        img = load_image_data(file_path)
+        shape = img.shape[:2]
 
-    with TiffFile(file_path) as tif:
-        img = tif.series[0].asarray()
-        shape = img.shape[0:2] if img.ndim == 2 or img.shape[0] < img.shape[2] else img.shape[1:3] 
-        return shape
+    return shape
 
 
 
@@ -187,28 +213,6 @@ def get_pixel_size_ome_tiff(file_path):
         py = float(py) if py is not None else None
 
         return px, py
-
-
-
-def load_image_data(file_path):
-    """
-    Load image data from a file and arrange dimensions as (Y, X, C) or (Y, X).
-
-    Parameters:
-    - file_path (str): Path to the image file
-
-    Returns:
-    - img (ndarray): Loaded image
-    """
-    
-    if file_path.endswith(".tif") or file_path.endswith(".tiff"):
-        img_raw = imread(file_path)
-        img = np.array(img_raw) 
-
-        return img if (len(img.shape) == 2) or (img.shape[2] < img.shape[0]) else img.transpose(1, 2, 0)
-    
-    else: 
-        raise ValueError("Unsupported file format. Please provide a .tif file.")
 
 
 
@@ -299,6 +303,9 @@ def save_ome_tiff(
     - physical_size_x (float or None): Physical size of a pixel in X direction (µm). 
     - physical_size_y (float or None): Physical size of a pixel in Y direction (µm)
     - source_ome_xml (str or None): Source OME-XML metadata to extract channel names if channel_names is None
+
+    Returns:
+    - None
     """
 
     # prepare data in CYX format
@@ -357,3 +364,50 @@ def save_ome_tiff(
              resolution=(Y, X),
              metadata=metadata,
          )
+
+
+
+def save_ome_mask(mask, out_path, physical_size_x=None, physical_size_y=None, source_ome_xml=None):
+    """
+    Save a segmentation mask as an OME-TIFF file with class labels.
+
+    Parameters:
+    - mask (ndarray): Segmentation mask to save (2D)
+    - out_path (str): Output file path
+    - physical_size_x (float or None): Pixel size in X (µm)
+    - physical_size_y (float or None): Pixel size in Y (µm)
+    - source_ome_xml (str or None): OME-XML to extract additional metadata like class names
+
+    Returns:
+    - None
+    """
+
+    # add channel axis
+    if mask.ndim == 2:
+        mask_to_save = mask[np.newaxis, :, :]  # shape (1, Y, X)
+    else:
+        mask_to_save = mask
+
+    # convert mask to integer data type
+    max_label = mask.max()
+    if max_label <= 255:
+        mask = mask.astype(np.uint8)
+    else:
+        mask = mask.astype(np.uint16)
+    
+    
+    with TiffWriter(out_path, ome=True, bigtiff=True) as tif:
+        metadata = {
+            "axes": "CYX",
+            "PhysicalSizeX": physical_size_x,
+            "PhysicalSizeXUnit": "µm",
+            "PhysicalSizeY": physical_size_y,
+            "PhysicalSizeYUnit": "µm",
+            "Channel": {"Name": ["Segmentation Mask"]},
+        }
+
+        tif.write(
+            mask_to_save,
+            metadata=metadata,
+            compression="deflate"
+        )

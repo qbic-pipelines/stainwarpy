@@ -1,9 +1,10 @@
-from skimage.transform import warp
-from .preprocess import load_and_scale_images, colour_deconvolusion_preprocessing_HnE, extract_channel
+from skimage.transform import warp, resize
+import numpy as np
+from .preprocess import load_and_scale_images, colour_deconvolusion_preprocessing_HnE, extract_channel, get_image_size_ome_tiff
 from .reg import register_DAPI_HnE
 from .metrics import compute_TRE, compute_mutual_information
 
-def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fixed_img, feature_tform='similarity'):
+def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, final_img_sz, feature_tform='similarity'):
     """
     Pipeline for registering images. Loads and scales images, preprocesses them, performs registration, and computes registration 
     metrics.
@@ -13,7 +14,7 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
     - moving_path (str): Path to the moving image
     - fixed_px_sz (float): Pixel size of the fixed image (if image is not .ome.tif)
     - moving_px_sz (float): Pixel size of the moving image (if image is not .ome.tif)
-    - fixed_img (str): Type of fixed image: ['multiplexed', 'hne']
+    - final_img_sz (str): Pixel size for final image: ['fixed', 'moving']
     - feature_tform (str): Type of transformation to estimate ('similarity', 'affine', 'projective')
 
     Returns:
@@ -28,17 +29,19 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
     print("Images loaded.")
 
     # preprocess HnE image
-    if fixed_img == 'multiplexed':
-        moving_prepr = colour_deconvolusion_preprocessing_HnE(moving_init)
-        fixed_prepr = fixed_init
-    elif fixed_img == 'hne':
-        fixed_prepr = colour_deconvolusion_preprocessing_HnE(fixed_init)
-        if len(moving_init.shape) == 2:
-            moving_prepr = moving_init
-        else:
-            moving_prepr = extract_channel(moving_init, 0)
+    if len(moving_init.shape) == 3:
+        if moving_init.shape[2] == 3:
+            moving_prepr = colour_deconvolusion_preprocessing_HnE(moving_init)
+            fixed_prepr = fixed_init
+    elif len(fixed_init.shape) == 3:
+        if fixed_init.shape[2] == 3:
+            fixed_prepr = colour_deconvolusion_preprocessing_HnE(fixed_init)
+            if len(moving_init.shape) == 2:
+                moving_prepr = moving_init
+            else:
+                moving_prepr = extract_channel(moving_init, 0)
     else:
-        raise ValueError("fixed_img must be either 'multiplexed' or 'hne'")
+        raise ValueError("At least one of the images must be an HnE stained image with 3 channels.")
     print("Preprocessing completed.")
     
     
@@ -50,6 +53,36 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
 
     transformation_maps, registered_imgs, tre_pts = register_DAPI_HnE(fixed_prepr, moving_prepr, feature_tform)
     moved_img = warp(moving_init, transformation_maps.inverse, output_shape=(h, w, moving_init.shape[2]) if len(moving_init.shape) == 3 else (h, w))
+
+
+    # set final image size
+    try:
+        if final_img_sz == 'fixed':
+            target_shape = get_image_size_ome_tiff(fixed_path)
+
+            if len(moved_img.shape) == 2:
+                moved_img = resize(moved_img, target_shape, anti_aliasing=True)
+            elif len(moved_img.shape) == 3:
+                moved_img = resize(moved_img, (target_shape[0], target_shape[1], moved_img.shape[2]), anti_aliasing=True)
+
+        elif final_img_sz == 'moving':
+            moved_img = moved_img
+
+    except:
+        print("Final image resizing skipped and kept at original moving image size. 'final_img_sz' parameter should be either 'fixed' or 'moving'.")
+
+
+    # set final image data type
+    try: 
+        if moving_init.shape[2] == 3:
+            moved_img = np.clip(moved_img, 0, 1)
+            moved_img = np.rint(moved_img * 255).astype(np.uint8) # 0-255 for HnE
+        else:
+            moved_img = np.clip(moved_img, 0, 1)
+            moved_img = (moved_img * 65535).astype(np.uint16)
+    except:
+        moved_img = np.clip(moved_img, 0, 1)
+        moved_img = (moved_img * 65535).astype(np.uint16)
 
 
     # evaluate registration with metrics
