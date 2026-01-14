@@ -48,7 +48,7 @@ conda install -c bioconda stainwarpy
 ### Register Images
 
 ```bash
-stainwarpy register <fixed_path> <moving_path> <output_folder> <fixed_img> [options]
+stainwarpy register <fixed_path> <moving_path> <output_folder> <final_img_sz> [options]
 ```
 
 #### Examples:
