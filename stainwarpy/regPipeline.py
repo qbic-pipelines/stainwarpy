@@ -4,7 +4,7 @@ from .preprocess import load_and_scale_images, colour_deconvolusion_preprocessin
 from .reg import register_DAPI_HnE
 from .metrics import compute_TRE, compute_mutual_information
 
-def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, final_img_sz, feature_tform='similarity'):
+def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, final_img_sz, feature_tform='similarity', chnl_idx=0):
     """
     Pipeline for registering images. Loads and scales images, preprocesses them, performs registration, and computes registration 
     metrics.
@@ -16,6 +16,7 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
     - moving_px_sz (float): Pixel size of the moving image (if image is not .ome.tif)
     - final_img_sz (str): Pixel size for final image: ['fixed', 'moving']
     - feature_tform (str): Type of transformation to estimate ('similarity', 'affine', 'projective')
+    - chnl_idx (int): Channel index (DAPI) to extract if channel extraction not done beforehand for multiplexed image
 
     Returns:
     - transformation_maps (skimage.transform): Estimated transformation object
@@ -25,7 +26,7 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
     """
     
     # load and scale images 
-    fixed_init, moving_init = load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz)
+    fixed_init, moving_init = load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz, chnl_idx)
     print("Images loaded.")
 
     # preprocess HnE image
@@ -39,7 +40,7 @@ def registration_pipeline(fixed_path, moving_path, fixed_px_sz, moving_px_sz, fi
             if len(moving_init.shape) == 2:
                 moving_prepr = moving_init
             else:
-                moving_prepr = extract_channel(moving_init, 0)
+                moving_prepr = extract_channel(moving_init, chnl_idx)
     else:
         raise ValueError("At least one of the images must be an HnE stained image with 3 channels.")
     print("Preprocessing completed.")

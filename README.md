@@ -23,7 +23,7 @@
 
 - For most cases, it is recommended to register **H&E images onto multiplexed images** (H&E as moving image).  
 - The **default similarity transformation** usually works well and stable, therefore recommended.
-
+- ⚠️Note: This package is under active development. Frequent updates may introduce breaking changes. Use new versions with caution.
 
 ## Installation
 
@@ -73,12 +73,13 @@ stainwarpy register data/fixed_img.tif data/moving_img.tif ../output multiplexed
 - `--multiplexed-px-sz` : Pixel size of the multiplexed image (no need to provide for ome.tiff, so default: None)
 - `--hne-px-sz` : Pixel size of the H&E image (no need to provide for ome.tiff, so default: None)
 - `--feature-tform` : Feature transformation method: `similarity` or`affine` or `projective` (default: `similarity`)
+- `--channel-idx` : Channel index (DAPI) to extract if channel extraction not done beforehand for multiplexed image (default: `0`), not used if already extracted.
 
 #### Output
 
 After running registration, the following files/folders will be generated and saved in the specified output folder:
 
-- **registration_metrics_tfrom_map.json** — TRE and Mutual Information and transformation map in an user friendly file format  
+- **registration_metrics_tform_map.json** — TRE and Mutual Information and transformation map in an user friendly file format  
 - **0_final_channel_image.ome.tif** — Registered image (in the pixel size of moving image)
 - **feature_based_transformation_map.npy** — Transformation map 
 

@@ -2,15 +2,25 @@ import typer
 import os
 import numpy as np
 import json
-from tifffile import imwrite, TiffFile
+from tifffile import TiffFile
 from skimage.transform import AffineTransform, resize
+from stainwarpy import __version__
 from .regPipeline import registration_pipeline
-from .preprocess import extract_channel, load_image_data, get_pixel_size_ome_tiff, save_ome_tiff, save_ome_mask
+from .preprocess import extract_channel, load_image_data, get_pixel_size_ome_tiff, get_image_size_ome_tiff, save_ome_tiff, save_ome_mask
 from .reg import transform_seg_mask
 
 
 app = typer.Typer(help="Register H&E stained images to multiplexed images using a feature based registration pipeline.")
 
+
+@app.callback(invoke_without_command=True)
+def main_callback(
+    version: bool = typer.Option(False, "--version", help="Show stainwarpy version and exit.", is_eager=True)
+):
+    if version:
+        typer.echo(f"stainwarpy {__version__}")
+        raise typer.Exit()
+    
 
 @app.command(name="register")
 def register(
@@ -21,7 +31,8 @@ def register(
     final_img_sz: str = typer.Argument(..., help="Pixel size for final image: ['multiplexed', 'hne']"),
     multiplexed_px_sz: float = typer.Option(None, help="Pixel size of the multiplexed image (if image is not .ome.tif)"),
     hne_px_sz: float = typer.Option(None, help="Pixel size of the hne image (if image is not .ome.tif)"),
-    feature_tform: str = typer.Option('similarity', help="Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended.", show_default=True)
+    feature_tform: str = typer.Option('similarity', help="Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended.", show_default=True),
+    channel_idx: int = typer.Option(0, help="Channel index (DAPI) to extract if channel extraction not done beforehand for multiplexed image", show_default=True)
 ):
     """
     Sub-command to register H&E stained images to multiplexed images using feature based registration. Saves registered image, transformation maps and registration metrics to the specified output folder.
@@ -35,6 +46,7 @@ def register(
     - multiplexed_px_sz (float, optional): Pixel size of the multiplexed image (if image is not .ome.tif)
     - hne_px_sz (float, optional): Pixel size of the hne image (if image is not .ome.tif)
     - feature_tform (str, optional): Feature transformation method ['similarity', 'affine', 'projective']. 'similarity' by default and recommended. 
+    - channel_idx (int, optional): Channel index (DAPI) to extract if channel extraction not done beforehand for multiplexed image
 
     Returns:
     - None
@@ -69,13 +81,14 @@ def register(
         fixed_px_sz,
         moving_px_sz,
         final_img_sz,
-        feature_tform=feature_tform
+        feature_tform=feature_tform,
+        chnl_idx=channel_idx
     )
 
     os.makedirs(output_folder, exist_ok=True)
 
     # save registration metrics and tfrom map in json
-    metrics_output_path = os.path.join(output_folder, "registration_metrics_tfrom_map.json")
+    metrics_output_path = os.path.join(output_folder, "registration_metrics_tform_map.json")
 
     params_list = transformation_map.params.tolist()
     with open(metrics_output_path, "w") as f:
@@ -207,8 +220,6 @@ def transform_seg_mask_cmd(
 
     print("Loaded transformation map.")
 
-    fixed_init = load_image_data(fixed_path)
-
     if fixed_px_sz is None:
         try:
             fixed_px_sz, _ = get_pixel_size_ome_tiff(fixed_path)
@@ -232,16 +243,16 @@ def transform_seg_mask_cmd(
     except:
         raise ValueError("Could not determine scaling factor. Please check the provided pixel sizes or image paths (ome.tiff).")
     
-    if len(fixed_init.shape) == 2:
-        fixed_init_sc = resize(fixed_init, (int(fixed_init.shape[0]/scale), int(fixed_init.shape[1]/scale)), anti_aliasing=True)
-    else:
-        fixed_init_sc = resize(fixed_init, (int(fixed_init[:, :, 0].shape[0]/scale), int(fixed_init[:, :, 0].shape[1]/scale)), anti_aliasing=True)
-    fixed_img_shape = (int(fixed_init_sc.shape[0]), int(fixed_init_sc.shape[1]))
 
+    # get fixed image size for output shape
+    fixed_img_shape_bfr = get_image_size_ome_tiff(fixed_path)
+    fixed_img_shape = (int(fixed_img_shape_bfr[0]/scale), int(fixed_img_shape_bfr[1]/scale))
+
+    # warp moving image
     moved_mask = transform_seg_mask(mask, transformation_maps, output_shape=fixed_img_shape)
 
     # resize the mask to match provided pixel size
-    target_shape = fixed_init.shape[:2]
+    target_shape = fixed_img_shape_bfr
 
     if final_mask_sz == 'fixed':
         moved_mask = resize(moved_mask, target_shape, order=0, preserve_range=True, anti_aliasing=False).astype(moved_mask.dtype)

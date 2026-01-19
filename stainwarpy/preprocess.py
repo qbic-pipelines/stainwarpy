@@ -177,7 +177,7 @@ def get_image_size_ome_tiff(file_path):
     try:
         with TiffFile(file_path) as tif:
             img = tif.series[0].asarray()
-            shape = img.shape[0:2] if img.ndim == 2 or img.shape[0] < img.shape[2] else img.shape[1:3] 
+            shape = img.shape[-2:] 
     except:
         img = load_image_data(file_path)
         shape = img.shape[:2]
@@ -250,7 +250,7 @@ def extract_channel(img, channel_index):
 
 
 
-def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
+def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz, chnl_idx=0):
     """
     Load and scale fixed and moving images based on their pixel sizes, moving image is scaled to match fixed image.
 
@@ -259,6 +259,7 @@ def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
     - moving_path (str): Path to the moving image file
     - fixed_px_sz (float or None): Pixel size of the fixed image (µm). If None, will attempt to read from metadata.
     - moving_px_sz (float or None): Pixel size of the moving image (µm). If None, will attempt to read from metadata.
+    - chnl_idx (int): Channel index (DAPI) to extract if channel extraction not done beforehand for multiplexed image
 
     Returns:
     - fixed_init (ndarray): Loaded and scaled fixed image
@@ -293,7 +294,7 @@ def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz):
         fixed_init = resize(fixed_img, (int(fixed_img.shape[0]/scale), int(fixed_img.shape[1]/scale), fixed_img.shape[2]), anti_aliasing=True)
     elif fixed_img.shape[2] > 3:
         # extract specified channel (DAPI) if multiplexed
-        fixed_ch_img = extract_channel(fixed_img, 0)
+        fixed_ch_img = extract_channel(fixed_img, chnl_idx)
         fixed_init = resize(fixed_ch_img, (int(fixed_ch_img.shape[0]/scale), int(fixed_ch_img.shape[1]/scale)), anti_aliasing=True)
     fixed_init = fixed_init*255
 
