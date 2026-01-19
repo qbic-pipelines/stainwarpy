@@ -13,7 +13,7 @@
 
 ## Features
 
-- Register H&E images and multiplexed images (after extracting DAPI channel) using transformations.
+- Register H&E images and multiplexed images with >3 channels (after extracting DAPI channel) using transformations.
 - Supports feature-based registration.
 - Outputs registered images, transformation maps and evaluation metrics (TRE and Mutual Information).
 - Transforms segmentation masks based on the computed transformations
