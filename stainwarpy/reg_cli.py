@@ -80,6 +80,7 @@ def register(
         moving_path,
         fixed_px_sz,
         moving_px_sz,
+        fixed_img,
         final_img_sz,
         feature_tform=feature_tform,
         chnl_idx=channel_idx

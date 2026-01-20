@@ -178,10 +178,17 @@ def get_image_size_ome_tiff(file_path):
         with TiffFile(file_path) as tif:
             img = tif.series[0].asarray()
             shape = img.shape[-2:] 
+            if img.ndim == 2:
+                shape = img.shape
+            else:
+                shape = img.shape[:2] if img.shape[0] > img.shape[2] else img.shape[1:3]
     except:
         img = load_image_data(file_path)
-        shape = img.shape[:2]
-
+        if len(img.shape) == 2:
+            shape = img.shape
+        else:
+            shape = img.shape[:2] if img.shape[0] > img.shape[2] else img.shape[1:3]
+            
     return shape
 
 
@@ -332,8 +339,7 @@ def save_ome_tiff(
         # grayscale (Y, X)
         Y, X = img.shape
         C = 1
-        img = img.reshape(Y, X, 1)
-        data = img.transpose(2, 0, 1)
+        data = img[np.newaxis, :, :]
 
     elif img.ndim == 3:
         if img.shape[2] == 3:
