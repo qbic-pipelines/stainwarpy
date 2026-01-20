@@ -299,7 +299,7 @@ def load_and_scale_images(fixed_path, moving_path, fixed_px_sz, moving_px_sz, ch
         fixed_init = resize(fixed_img, (int(fixed_img.shape[0]/scale), int(fixed_img.shape[1]/scale)), anti_aliasing=True)
     elif fixed_img.shape[2] == 3:
         fixed_init = resize(fixed_img, (int(fixed_img.shape[0]/scale), int(fixed_img.shape[1]/scale), fixed_img.shape[2]), anti_aliasing=True)
-    elif fixed_img.shape[2] > 3:
+    elif fixed_img.shape[2] != 3:
         # extract specified channel (DAPI) if multiplexed
         fixed_ch_img = extract_channel(fixed_img, chnl_idx)
         fixed_init = resize(fixed_ch_img, (int(fixed_ch_img.shape[0]/scale), int(fixed_ch_img.shape[1]/scale)), anti_aliasing=True)
