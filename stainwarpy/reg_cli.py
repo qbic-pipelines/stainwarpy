@@ -107,9 +107,24 @@ def register(
     final_img_path = os.path.join(output_folder, "0_final_channel_image.ome.tif")
 
     if final_img_sz == 'fixed':
-        save_ome_tiff(final_img, final_img_path, physical_size_x=fixed_px_sz, physical_size_y=fixed_px_sz, source_ome_xml=ome_xml)
+        if fixed_px_sz is None:
+            try:
+                fixed_px_sz, _ = get_pixel_size_ome_tiff(fixed_path)
+            except:
+                fixed_px_sz = None
+
+        save_ome_tiff(final_img, final_img_path, physical_size_x=fixed_px_sz, physical_size_y=fixed_px_sz, 
+                      source_ome_xml=ome_xml, channel_names= ["Red", "Green", "Blue"] if fixed_img == 'multiplexed' else None)
+    
     elif final_img_sz == 'moving':
-        save_ome_tiff(final_img, final_img_path, physical_size_x=moving_px_sz, physical_size_y=moving_px_sz, source_ome_xml=ome_xml)
+        if moving_px_sz is None:
+            try:
+                moving_px_sz, _ = get_pixel_size_ome_tiff(moving_path)
+            except:
+                moving_px_sz = None
+
+        save_ome_tiff(final_img, final_img_path, physical_size_x=moving_px_sz, physical_size_y=moving_px_sz, 
+                      source_ome_xml=ome_xml, channel_names= ["Red", "Green", "Blue"] if fixed_img == 'multiplexed' else None)
 
     print(f"Registered image saved to {final_img_path}")
 
