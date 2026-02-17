@@ -164,8 +164,15 @@ def extract_channel_cmd(
     except:
         px, py = None, None
 
+    ome_xml = None
+    try:
+        with TiffFile(file_path) as ref:
+            ome_xml = ref.ome_metadata
+    except:
+        pass
+
     img_path = os.path.join(output_folder_path, f"multiplexed_single_channel_img.ome.tif")
-    save_ome_tiff(img_ch, img_path, physical_size_x=px, physical_size_y=py)
+    save_ome_tiff(img_ch, img_path, physical_size_x=px, physical_size_y=py, chnl_idx=channel_idx, source_ome_xml=ome_xml)
     print(f"Image with extracted channel saved to {img_path}")
 
 

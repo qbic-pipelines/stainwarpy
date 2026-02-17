@@ -318,7 +318,8 @@ def save_ome_tiff(
     channel_names=None,
     physical_size_x=None,
     physical_size_y=None,
-    source_ome_xml=None):
+    source_ome_xml=None,
+    chnl_idx=None):
     """
     Save an image as an OME-TIFF file with specified metadata.
 
@@ -326,9 +327,10 @@ def save_ome_tiff(
     - img (ndarray): Image to be saved
     - out_path (str): Output file path
     - channel_names (list of str or None): Names of the channels. If None, will attempt to read from source_ome_xml or auto-generate.
-    - physical_size_x (float or None): Physical size of a pixel in X direction (µm). 
+    - physical_size_x (float or None): Physical size of a pixel in X direction (µm) 
     - physical_size_y (float or None): Physical size of a pixel in Y direction (µm)
     - source_ome_xml (str or None): Source OME-XML metadata to extract channel names if channel_names is None
+    - chnl_idx (int): channel index if a channel is extracted from the original img
 
     Returns:
     - None
@@ -342,18 +344,9 @@ def save_ome_tiff(
         data = img[np.newaxis, :, :]
 
     elif img.ndim == 3:
-        if img.shape[2] == 3:
-            # RGB (Y, X, 3)
-            Y, X, C = img.shape
-            data = img.transpose(2, 0, 1)
-
-        elif img.shape[2] > 3:
-            # multiplexed (Y, X, C)
-            Y, X, C = img.shape
-            data = img.transpose(2, 0, 1)
-
-        else:
-            raise ValueError(f"Unsupported shape {img.shape}: no alpha allowed and no Z/T.")
+        # RGB (Y, X, 3), multiplexed (Y, X, C)
+        Y, X, C = img.shape
+        data = img.transpose(2, 0, 1)
 
     else:
         raise ValueError(f"Unsupported ndim={img.ndim}")
@@ -373,6 +366,7 @@ def save_ome_tiff(
             if source_ome_xml is not None:
                 root = ET.fromstring(source_ome_xml)
                 channel_names = [c.get("Name") for c in root.findall(".//{*}Channel")]
+                channel_names = [channel_names[chnl_idx]] if chnl_idx is not None else channel_names
             else:
                 # if not provided, auto-generate
                 channel_names = [f"Channel_{i}" for i in range(C)]
