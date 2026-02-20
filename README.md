@@ -7,6 +7,8 @@
 [![Docker](https://img.shields.io/badge/Docker-stainwarpy--cli-blue)](https://hub.docker.com/repository/docker/tckum/stainwarpy-cli)
 [![PyPI version](https://img.shields.io/pypi/v/stainwarpy)](https://pypi.org/project/stainwarpy/)
 [![Bioconda version](https://img.shields.io/conda/vn/bioconda/stainwarpy.svg)](https://anaconda.org/bioconda/stainwarpy)
+[![nf-core module version](https://img.shields.io/badge/nf--core_modules-stainwarpy-green?style=flat&logo=nfcore)](https://github.com/nf-core/modules/tree/master/modules/nf-core/stainwarpy)
+[![nf-core subworkflow version](https://img.shields.io/badge/nf--core_subworkflow-tif__registration__stainwarpy-green?style=flat&logo=nfcore)](https://github.com/nf-core/modules/tree/master/subworkflows/nf-core/tif_registration_stainwarpy)
 
 **stainwarpy** is a command-line tool and a Python package for registering H&E stained and multiplexed tissue images. It provides a feature based registration pipeline, saving registered images, transformation maps and evaluation metrics.
 
