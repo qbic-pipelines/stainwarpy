@@ -420,9 +420,9 @@ def save_ome_mask(mask, out_path, physical_size_x=None, physical_size_y=None, so
     # convert mask to integer data type
     max_label = mask.max()
     if max_label <= 255:
-        mask = mask.astype(np.uint8)
+        mask = mask_to_save.astype(np.uint8)
     else:
-        mask = mask.astype(np.uint16)
+        mask = mask_to_save.astype(np.uint16)
     
     
     with TiffWriter(out_path, ome=True, bigtiff=True) as tif:
@@ -436,7 +436,7 @@ def save_ome_mask(mask, out_path, physical_size_x=None, physical_size_y=None, so
         }
 
         tif.write(
-            mask_to_save,
+            mask,
             metadata=metadata,
             compression="deflate"
         )
