@@ -1,7 +1,7 @@
 # stainwarpy
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/tckumarasekara/stainwarpy/main/stainwarpy_logo.png" width="600" alt="Stainwarpy Logo">
+  <img src="stainwarpy_logo.png" width="600" alt="Stainwarpy Logo">
 </p>
 
 [![Docker](https://img.shields.io/badge/Docker-stainwarpy--cli-blue)](https://hub.docker.com/repository/docker/tckum/stainwarpy-cli)
