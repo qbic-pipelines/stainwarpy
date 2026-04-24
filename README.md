@@ -25,7 +25,6 @@
 
 - For most cases, it is recommended to register **H&E images onto multiplexed images** (H&E as moving image).  
 - The **default similarity transformation** usually works well and stable, therefore recommended.
-- ⚠️Note: This package is under active development. Frequent updates may introduce breaking changes. Use new versions with caution.
 
 ## Installation
 
